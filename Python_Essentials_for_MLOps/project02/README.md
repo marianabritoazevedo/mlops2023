@@ -70,4 +70,61 @@ Your terminal will display a detailed log, including your credentials (usually w
 
 ### 2️⃣ Necessary configurations in the project
 
+After setting up your project, it's essential to configure Apache Airflow and establish a proper connection to the database.
+
+1. **Specify the DAGs Folder**
+
+The `dags` folder contains the file necessary for this project to run on Airflow. First, identify the path of your DAG file using the `pwd` command. Next, access the configuration file:
+
+```
+nano ~/airflow/airflow.cfg
+```
+
+In the configuration file, update the dags_folder variable with the path obtained from the pwd command.
+
+2. **Create the database**
+
+Within the dags folder, create a database named episodes.db:
+
+```
+sqlite3 episodes.db
+```
+
+Verify if the database has been created successfully:
+
+```
+.databases
+```
+
+Establish a connection between this database and Airflow. Replace `path_to_dags_folder with` the previously obtained path:
+
+```
+airflow connections add 'podcasts' --conn-type 'sqlite' --conn-host '<path_to_dags_folder>/episodes.db'
+```
+
+Ensure that the connection has been established correctly:
+
+```
+airflow connections get podcasts
+```
+
+3. **Load data into SQLite**
+
+To load your data, you need to install the following library:
+
+```
+pip install apache-airflow[pandas]
+```
+
+Once the project is executed, you can enter the database and verify if the data has been loaded:
+
+```
+sqlite3 episodes.db
+select * from episodes;
+```
+
 ### 3️⃣ Running the project
+
+After completing all the installations and configurations, you are ready to run the project. Access Airflow using the command `airflow standalone` and select the flow named `podcast_summary`. On the right side, you will find a play button. Click on it and select the option `Trigger DAG`. This will execute your project and display the data pipeline on the screen!
+
+Additionally, you can choose one of the nodes in the graph, and select the option log to view its logs.
