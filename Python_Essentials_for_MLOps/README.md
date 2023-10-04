@@ -29,4 +29,5 @@ The primary technologies employed in this project, utilizing the Python programm
 ## 🔍 References
 
 [🎥 Video about this project](https://www.youtube.com/)
+
 [📜 Dataquest certificate - Intermediate Python for Web Development](https://app.dataquest.io/view_cert/8LNPW67UKIWDK5BB42O5)
