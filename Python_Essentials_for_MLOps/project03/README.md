@@ -46,11 +46,9 @@ The project 03 is about to build a KNN classifier to predict heart diseases. Thi
 
 ## ⚠️ Note about pylint
 
-In this project, after running  `pylint`, the obtained score was 9.51 out of 10.00. This occurred due to three main reasons:
+In this project, after running  `pylint`, the obtained score was 9.69 out of 10.00. This occurred due to three main reasons:
 
 - Variables `X` and `y` don't adhere to the snake_case naming style: as these variables are standard in the data science community, the decision was made to retain these names;
-
-- Unused variable `fig`: although it wasn't utilized elsewhere in the code, it is necessary to set the `figsize` parameter and enlarge the size of the figure. Hence, it was opted to retain this variable.
 
 - To many local variables in `main()` function: given the complexity of the analysis being performed, and with no repeated variables within this function, it was decided to keep it as is.
 
