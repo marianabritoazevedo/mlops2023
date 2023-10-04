@@ -22,7 +22,7 @@ The project 01 is a movie recommendation system developed in Python. This portfo
         python -m venv your_env
         ```
 
-    - Navigate to the directory containing the `requirements.txt` file and install the required libraries:
+    - In the directory `project01`, there is the `requirements.txt` file. Install the required libraries:
 
         ```bash
         pip install -r requirements.txt

@@ -14,7 +14,7 @@ The project 03 is about to build a KNN classifier to predict heart diseases. Thi
         python -m venv your_env
         ```
 
-    - Navigate to the directory containing the `requirements.txt` file and install the required libraries:
+    - In the directory `project03`, there is the `requirements.txt` file. Install the required libraries:
 
         ```bash
         pip install -r requirements.txt
