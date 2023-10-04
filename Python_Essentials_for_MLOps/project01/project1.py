@@ -18,78 +18,135 @@ class NoDataFiltered(Exception):
     Raised when there is no search when applying a filter 
     '''
 
-def read_file(link):
+def read_csv_file(file_path: str) -> pd.DataFrame:
     '''
-    This function aims to read a csv file
+    Reads a CSV file and returns its content as a pandas DataFrame.
+
+    Args:
+        file_path (str): Path to the CSV file.
+
+    Returns:
+        pd.DataFrame or None: A pandas DataFrame containing the data 
+        from the CSV file, or None if the file is not found.
     '''
     try:
-        data = pd.read_csv(link)
-        logging.info('✅ Data loaded successfully!')
+        data = pd.read_csv(file_path)
+        logging.info('✅ Data loaded successfully from file: %s', file_path)
         return data
     except FileNotFoundError:
-        logging.error('❌ File not found.')
+        logging.error('❌ File not found at path: %s', file_path)
         return None
 
-def show_file(data):
+def display_dataframe(data: pd.DataFrame) -> None:
     '''
-    This function aims to show the first 5 lines of a Pandas dataframe
+    Displays the first 5 rows of a Pandas DataFrame.
+
+    Args:
+        data (pd.DataFrame): The DataFrame to be displayed.
+
+    Returns:
+        None
     '''
     try:
-        display(data.head())
-    except AttributeError:
-        logging.error('❌ It was not possible to show this file.')
+        if isinstance(data, pd.DataFrame):
+            display(data.head())
+        else:
+            raise ValueError('❌ Invalid input: Not a Pandas DataFrame')
+    except ValueError as error:
+        logging.error(error)
 
-def show_types(data):
+
+def column_types(data: pd.DataFrame) -> None:
     '''
-    This function aims to show the types of the columns of a dataframe
+    Displays the data types of columns in a Pandas DataFrame.
+
+    Args:
+        data (pd.DataFrame): The DataFrame for which column types are to be displayed.
+
+    Returns:
+        None
     '''
     try:
-        display(data.dtypes)
-    except AttributeError:
-        logging.error('❌ It was not possible to show the types of this file.')
+        if isinstance(data, pd.DataFrame):
+            display(data.dtypes)
+        else:
+            raise ValueError('❌ Invalid input: Not a Pandas DataFrame')
+    except ValueError as error:
+        logging.error(error)
 
-def clean_title(title):
+def clean_title(title: str) -> str:
     '''
-    This function removes special characters from a string, 
-    retaining only letters, numbers, and white spaces.
-    '''
-    title = re.sub("[^a-zA-Z0-9 ]", "", title)
-    return title
+    Removes special characters from a string, retaining only letters, numbers, and white spaces.
 
-def search_similar_movies_title(title, data, vectorizer, tfidf):
-    '''This function returns the movies most similar to 
-    the provided movie based on its title. '''
-    title = clean_title(title)
-    query_vec = vectorizer.transform([title])
+    Args:
+        title (str): The input string containing special characters.
+
+    Returns:
+        str: The cleaned string without special characters.
+    '''
+    cleaned_title = re.sub(r"[^a-zA-Z0-9 ]", "", title)
+    return cleaned_title
+
+def search_similar_movies_title(title: str, data: pd.DataFrame, vectorizer, tfidf) -> pd.DataFrame:
+    '''
+    Returns movies most similar to the provided movie based on its title.
+
+    Args:
+        title (str): The movie title to search for.
+        data (pd.DataFrame): The DataFrame containing movie data.
+        vectorizer: The vectorizer used to transform movie titles into vectors.
+        tfidf: The TF-IDF vectorizer used for movie title similarity calculation.
+
+    Returns:
+        pd.DataFrame: DataFrame containing movies most similar to the provided title.
+    '''
+    cleaned_title = clean_title(title)
+    query_vec = vectorizer.transform([cleaned_title])
     similarity = cosine_similarity(query_vec, tfidf).flatten()
     indices = np.argpartition(similarity, -5)[-5:]
     results = data.iloc[indices].iloc[::-1]
     return results
 
-def filter_movie_by_id(movie_id, data):
+def filter_movie_by_id(movie_id: int, data: pd.DataFrame) -> pd.DataFrame:
     '''
-    This function searchs a movie by its id
+    Filters a movie by its ID in the provided DataFrame.
+
+    Args:
+        movie_id (int): The ID of the movie to search for.
+        data (pd.DataFrame): The DataFrame containing movie data.
+
+    Returns:
+        pd.DataFrame or None: DataFrame containing the filtered movie, or None if no movie is found.
     '''
     try:
-        movie = data[data["movieId"] == movie_id]
-        if len(movie) == 0:
+        filtered_movie = data[data["movieId"] == movie_id]
+        if len(filtered_movie) == 0:
             raise NoDataFiltered('❌ There isn\'t any movie with this ID.')
-        return movie
+        return filtered_movie
     except NoDataFiltered as error:
-        print(error)
+        logging.error(error)
         return None
 
-def search_similar_movies_ratings(movie_id, ratings, movies):
+def search_similar_movies_ratings(movie_id: int, ratings: pd.DataFrame,
+                                  movies: pd.DataFrame) -> pd.DataFrame:
     '''
-    This function searches for similar movies based on users ratings
+    Searches for similar movies based on users ratings.
+
+    Args:
+        movie_id (int): The ID of the movie to search for similar movies.
+        ratings (pd.DataFrame): DataFrame containing users' movie ratings.
+        movies (pd.DataFrame): DataFrame containing movie information.
+
+    Returns:
+        pd.DataFrame: DataFrame containing top recommendations similar to the provided movie.
     '''
     # Find users who rated the movie with the specified ID and rated it higher than 4
-    query=(ratings["movieId"] == movie_id) & (ratings["rating"] > 4)
-    similar_users = ratings[query]["userId"].unique()
+    similar_users = ratings[(ratings["movieId"] == movie_id)
+                            & (ratings["rating"] > 4)]["userId"].unique()
 
     # Filter the movie ratings made by similar users and a rating higher than 4
-    query=(ratings["userId"].isin(similar_users)) & (ratings["rating"] > 4)
-    similar_user_recs = ratings[query]["movieId"]
+    similar_user_recs = ratings[(ratings["userId"].isin(similar_users))
+                                & (ratings["rating"] > 4)]["movieId"]
 
     # Calculate the recommendation percentage for each movie based on ratings from similar users
     similar_user_recs = similar_user_recs.value_counts() / len(similar_users)
@@ -97,58 +154,51 @@ def search_similar_movies_ratings(movie_id, ratings, movies):
     # Filter movies with a recommendation percentage greater than 10%
     similar_user_recs = similar_user_recs[similar_user_recs > .10]
 
-    # Filter all movie ratings made by similar users and calculates its recommendation percentage
-    query=(ratings["movieId"].isin(similar_user_recs.index)) & (ratings["rating"] > 4)
-    all_users = ratings[query]
+    # Filter all movie ratings made by similar users
+    # and calculates its recommendation percentage
+    all_users = ratings[(ratings["movieId"].isin(similar_user_recs.index))
+                        & (ratings["rating"] > 4)]
     all_user_recs = all_users["movieId"].value_counts() / len(all_users["userId"].unique())
 
     # Concatenate the recommendation percentages from similar users and all users
     rec_percentages = pd.concat([similar_user_recs, all_user_recs], axis=1)
     rec_percentages.columns = ["similar", "all"]
 
-    # Calculate the score as the ratio of recommendation percentages from
-    # similar users and all users
+    # Calculate the score as the ratio of recommendation
+    # percentages from similar users and all users
     rec_percentages["score"] = rec_percentages["similar"] / rec_percentages["all"]
     rec_percentages = rec_percentages.sort_values("score", ascending=False)
 
     # Return the top 10 recommendations
-    cols=["score", "title", "genres"]
+    cols = ["score", "title", "genres"]
     results = rec_percentages.head(10).merge(movies, left_index=True, right_on="movieId")[cols]
     return results
 
 def main():
     '''
-    This is the function executed when we run the program
+    Main function that serves as an entry point for the program execution.
     '''
-    # List of movies
-    movies = read_file("files/movies.csv")
-    show_file(movies)
+    # Load movies data from CSV file
+    movies = read_csv_file("files/movies.csv")
+    display_dataframe(movies)
 
-    # Display movies with clean title
+    # Clean movie titles and display the updated dataframe
     movies["clean_title"] = movies["title"].apply(clean_title)
-    show_file(movies)
+    display_dataframe(movies)
 
-    # Creates an TfidfVectorizer instance
-    vectorizer = TfidfVectorizer(ngram_range=(1,2))
-    # Numeric representation of movie title based on words frequency and bigrams
+    # Initialize TfidfVectorizer for movie titles
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2))
     tfidf = vectorizer.fit_transform(movies["clean_title"])
 
-    # Defines the movie input to search to similar movies
-    movie_input = widgets.Text(
-        value='Toy Story',
-        description='Movie Title:',
-        disabled=False
-    )
-
-    # List with 5 most similar movies
+    # Define widgets for user input
+    movie_input = widgets.Text(value='Toy Story', description='Movie Title:', disabled=False)
     movie_list = widgets.Output()
 
     def on_type_title(data):
         '''
-        This function is a callback called every time the movie_input 
-        changes. When this happens, the movie_list will be cleared, and 
-        if the title has more than 5 characters, it will search the 
-        most similar movies according to its title
+        Callback function called every time the movie_input changes. 
+        Clears movie_list and searches for similar movies when the title 
+        has more than 5 characters.
         '''
         with movie_list:
             movie_list.clear_output()
@@ -158,39 +208,32 @@ def main():
             else:
                 logging.info('ℹ️ Enter at least 6 characters to search for similar movies!')
 
-    # Automatically calls on_type_title when movie_input changes
     movie_input.observe(on_type_title, names='value')
-    # Display the movie and its similar ones
     display(movie_input, movie_list)
 
-    # List of movies ratings
-    ratings = read_file("files/ratings.csv")
-    show_file(ratings)
-    show_types(ratings)
+    # Load ratings data from CSV file and display it
+    ratings = read_csv_file("files/ratings.csv")
+    display_dataframe(ratings)
+    column_types(ratings)
 
-    # Filter movie and show its recommendations
+    # Filter movie by ID and display it
     movie_id = 89745
     movie = filter_movie_by_id(movie_id, movies)
     display(movie)
+
+    # Find similar movies for the filtered movie and display recommendations
     similar_movies = search_similar_movies_ratings(movie_id, ratings, movies)
     display(similar_movies)
 
-    # Defines the movie input to search to similar movies
-    movie_name_input = widgets.Text(
-        value='Toy Story',
-        description='Movie Title:',
-        disabled=False
-    )
-
-    # List with 10 movies to recommend
+    # Define widgets for recommending movies based on user input
+    movie_name_input = widgets.Text(value='Toy Story', description='Movie Title:', disabled=False)
     recommendation_list = widgets.Output()
 
     def on_type_rec(data):
         '''
-        This function is a callback called every time the movie_input 
-        changes. When this happens, the recommendation_list will be 
-        cleared, and if the title has more than 5 characters, it will 
-        search 10 movies to recommend
+        Callback function called every time the movie_name_input changes. 
+        Clears recommendation_list and searches for movie recommendations 
+        when the title has more than 5 characters.
         '''
         with recommendation_list:
             recommendation_list.clear_output()
