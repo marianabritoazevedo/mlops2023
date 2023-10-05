@@ -1,15 +1,9 @@
-'''
-This module aims to create a data pipeline with
-Apache Airflow to download poadcasts from
-marketplace
-'''
-
+import os
 import json
 import logging
 import requests
 import pendulum
 import xmltodict
-from typing import List, Dict
 from pydub import AudioSegment
 from vosk import Model, KaldiRecognizer
 
@@ -21,14 +15,7 @@ PODCAST_URL = "https://www.marketplace.org/feed/podcast/marketplace/"
 EPISODE_FOLDER = "episodes"
 FRAME_RATE = 16000
 
-def create_database() -> SqliteOperator:
-    '''
-    This function creates a SQLite database table to store information about the podcasts.
-
-    Returns:
-        SqliteOperator: An instance of SqliteOperator representing 
-        the task to create the database table.
-    '''
+def create_database():
     create_table_sql = """
         CREATE TABLE IF NOT EXISTS episodes (
             link TEXT PRIMARY KEY,
@@ -39,21 +26,20 @@ def create_database() -> SqliteOperator:
             transcript TEXT
         );
     """
-    create_database_task = SqliteOperator(
+    create_database = SqliteOperator(
         task_id='create_table_sqlite',
         sql=create_table_sql,
         sqlite_conn_id="podcasts"
     )
-    return create_database_task
+    return create_database
 
-@task()
-def get_episodes() -> List[Dict[str, str]]:
+def get_episodes():
     '''
-    This task retrieves the latest episodes from the PODCAST_URL and returns them as a list.
+    This task retrieves the latest episodes from
+    the PODCAST_URL and returns them as a list.
     
     Returns:
-        list: A list of dictionaries representing the latest podcast episodes.
-            Each dictionary contains keys: "link", "title", "pubDate", and "description".
+        list: List of latest podcast episodes.
     '''
     try:
         response = requests.get(PODCAST_URL, timeout=10)
@@ -61,21 +47,9 @@ def get_episodes() -> List[Dict[str, str]]:
 
         feed = xmltodict.parse(response.text)
         episodes = feed["rss"]["channel"]["item"]
-
-        # Parse episode information into a list of dictionaries
-        parsed_episodes = []
-        for episode in episodes:
-            episode_data = {
-                "link": episode.get("link", ""),
-                "title": episode.get("title", ""),
-                "pubDate": episode.get("pubDate", ""),
-                "description": episode.get("description", "")
-            }
-            parsed_episodes.append(episode_data)
-
-        num_episodes = len(parsed_episodes)
+        num_episodes = len(episodes)
         logging.info("ℹ️ Found %s episodes.", num_episodes)
-        return parsed_episodes
+        return episodes
 
     except requests.exceptions.HTTPError as http_err:
         logging.error("HTTP error occurred: %s", http_err)
@@ -84,19 +58,15 @@ def get_episodes() -> List[Dict[str, str]]:
         logging.error("An error occurred: %s", err)
         raise
 
-@task()
-def load_episodes(episodes: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def load_episodes(episodes):
     '''
     This task loads new episodes into the SQLite database.
     
     Args:
-        episodes (list): A list of dictionaries containing new episodes' information.
-            Each dictionary should have keys: "link", "title", "pubDate", and "description".
-
+        episodes (list): List of new episodes to be loaded.
+        
     Returns:
-        list: A list of dictionaries representing episodes successfully loaded into the database.
-            Each dictionary contains keys: 
-            "link", "title", "pubDate", "description", and "filename".
+        list: List of episodes successfully loaded into the database.
     '''
     try:
         hook = SqliteHook(sqlite_conn_id="podcasts")
@@ -106,13 +76,8 @@ def load_episodes(episodes: List[Dict[str, str]]) -> List[Dict[str, str]]:
         for episode in episodes:
             if episode["link"] not in stored_episodes["link"].values:
                 filename = f"{episode['link'].split('/')[-1]}.mp3"
-                new_episodes.append({
-                    "link": episode["link"],
-                    "title": episode["title"],
-                    "pubDate": episode["pubDate"],
-                    "description": episode["description"],
-                    "filename": filename
-                })
+                new_episodes.append([episode["link"], episode["title"],
+                episode["pubDate"], episode["description"], filename])
 
         hook.insert_rows(table='episodes', rows=new_episodes,
         target_fields=["link", "title", "published", "description", "filename"])
@@ -122,20 +87,15 @@ def load_episodes(episodes: List[Dict[str, str]]) -> List[Dict[str, str]]:
         logging.error("❌ An error occurred while loading episodes: %s", err)
         raise
 
-@task()
-def download_episodes(episodes: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def download_episodes(episodes):
     '''
     This task loads new episodes into the SQLite database.
     
     Args:
-        episodes (list): A list of dictionaries containing new episodes' information.
-            Each dictionary should have keys: 
-            "link", "title", "pubDate", and "description".
-
+        episodes (list): List of new episodes to be loaded.
+        
     Returns:
-        list: A list of dictionaries representing episodes successfully loaded into the database.
-            Each dictionary contains keys: 
-            "link", "title", "pubDate", "description", and "filename".
+        list: List of episodes successfully loaded into the database.
     '''
     try:
         hook = SqliteHook(sqlite_conn_id="podcasts")
@@ -145,35 +105,25 @@ def download_episodes(episodes: List[Dict[str, str]]) -> List[Dict[str, str]]:
         for episode in episodes:
             if episode["link"] not in stored_episodes["link"].values:
                 filename = f"{episode['link'].split('/')[-1]}.mp3"
-                new_episodes.append({
-                    "link": episode["link"],
-                    "title": episode["title"],
-                    "pubDate": episode["pubDate"],
-                    "description": episode["description"],
-                    "filename": filename
-                })
+                new_episodes.append([episode["link"], episode["title"],
+                episode["pubDate"], episode["description"], filename])
 
         hook.insert_rows(table='episodes', rows=new_episodes,
-                         target_fields=["link", "title", "published", "description", "filename"])
+        target_fields=["link", "title", "published", "description", "filename"])
         logging.info("✅ Loaded %s new episodes into the database.", len(new_episodes))
         return new_episodes
     except Exception as err:
         logging.error("❌ An error occurred while loading episodes: %s", err)
         raise
 
-@task()
-def speech_to_text(audio_files: List[Dict[str, str]], new_episodes: List[Dict[str, str]]) -> int:
+def speech_to_text(audio_files, new_episodes):
     '''
     This task transcribes audio files into text and updates the database with the transcripts.
     
     Args:
-        audio_files (list): A list of dictionaries containing information about audio files.
-            Each dictionary should have keys: "filename" (str) and "file_path" (str).
-        new_episodes (list): A list of dictionaries representing 
-        new episodes to be transcribed.
-            Each dictionary should have keys: 
-            "link" (str), "filename" (str), and other episode details.
-
+        audio_files (list): List of audio file information (e.g., file paths).
+        new_episodes (list): List of new episodes to be transcribed.
+        
     Returns:
         int: Number of episodes successfully transcribed and updated in the database.
     '''
@@ -191,9 +141,8 @@ def speech_to_text(audio_files: List[Dict[str, str]], new_episodes: List[Dict[st
 
             if any(entry["filename"] == filename for entry in audio_files):
                 print(f"Transcribing {filename}")
-                audio_file_path = [entry["file_path"] for entry in audio_files
-                if entry["filename"] == filename][0]
-                mp3 = AudioSegment.from_mp3(audio_file_path)
+                filepath = os.path.join(EPISODE_FOLDER, filename)
+                mp3 = AudioSegment.from_mp3(filepath)
                 mp3 = mp3.set_channels(1)
                 mp3 = mp3.set_frame_rate(FRAME_RATE)
 
@@ -215,23 +164,3 @@ def speech_to_text(audio_files: List[Dict[str, str]], new_episodes: List[Dict[st
     except Exception as err:
         logging.error("❌ An error occurred while transcribing episodes: %s", err)
         raise
-
-@dag(
-    dag_id='podcast_summary3',
-    schedule_interval="@daily",
-    start_date=pendulum.datetime(2022, 5, 30),
-    catchup=False,
-)
-def podcast_summary3():
-    '''
-    DAG for processing podcast data pipeline.
-    '''
-    create_database_task = create_database()
-    episodes = get_episodes()
-    new_episodes = load_episodes(episodes)
-    audio_files = download_episodes(episodes)
-    transcribed_count = speech_to_text(audio_files, new_episodes)
-
-    create_database_task >> episodes >> new_episodes >> audio_files >> transcribed_count
-
-SUMMARY = podcast_summary3()
