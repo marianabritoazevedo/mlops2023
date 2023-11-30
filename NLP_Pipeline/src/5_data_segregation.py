@@ -98,6 +98,16 @@ def create_artifacts(train_x, train_y, val_x, val_y, test_x, test_y, run, logger
     """
     Artifacts to store train, validation and test data
     """
+
+    joblib.dump(train_x, 'train_x')
+    joblib.dump(train_y, 'train_y')
+    joblib.dump(val_x, 'val_x')
+    joblib.dump(val_y, 'val_y')
+    joblib.dump(test_x, 'test_x')
+    joblib.dump(test_y, 'test_y')
+
+    logger.info("Dumping the train and validation data artifacts to the disk")
+
     # train_x artifact
     artifact_trainx = wandb.Artifact('train_x', type="train_data", 
                                       description="A json file representing the train_x")
