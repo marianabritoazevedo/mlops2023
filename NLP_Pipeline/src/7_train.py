@@ -134,7 +134,7 @@ def train_model1(model, X_train, y_train, x_val, y_val, logger, run):
     plot_loss_and_acc(history, 10, "Model1", run)
     energy_and_co2(tracker, logger)
 
-    model_artifact = wandb.Artifact('modelo1', type='model')
+    model_artifact = wandb.Artifact('model1', type='model')
     model.save(wandb.run.dir + '/model_tf', save_format='tf')
     model_artifact.add_dir(wandb.run.dir + '/model_tf')
     run.log_artifact(model_artifact)
@@ -178,6 +178,12 @@ def train_model2(model, X_train, y_train, x_val, y_val, logger, run):
     plot_loss_and_acc(history, 10, "Model2", run)
     energy_and_co2(tracker, logger)
 
+    model_artifact = wandb.Artifact('model2', type='model')
+    model.save(wandb.run.dir + '/model_tf', save_format='tf')
+    model_artifact.add_dir(wandb.run.dir + '/model_tf')
+    run.log_artifact(model_artifact)
+    logger.info('✅ Model 2 saved with success!')
+
 def model3(vectorizer_layer, embedding_layer):
     """
     Define the third model, a Multilayer Bidirectional
@@ -216,6 +222,12 @@ def train_model3(model, X_train, y_train, x_val, y_val, logger, run):
     logger.info('✅ Model 3 training finished with success!')
     plot_loss_and_acc(history, 3, "Model3", run)
     energy_and_co2(tracker, logger)
+
+    model_artifact = wandb.Artifact('model3', type='model')
+    model.save(wandb.run.dir + '/model_tf', save_format='tf')
+    model_artifact.add_dir(wandb.run.dir + '/model_tf')
+    run.log_artifact(model_artifact)
+    logger.info('✅ Model 3 saved with success!')
 
 def model4(train_x, train_y, val_x, val_y):
     """
@@ -266,6 +278,12 @@ def train_model4(tokenizer, model_before, train_dataset, val_dataset, logger, ru
     logger.info('✅ Model 4 training finished with success!')
     plot_loss_and_acc(history, 2, "Model4", run)
     energy_and_co2(tracker, logger)
+
+    model_artifact = wandb.Artifact('model4', type='model')
+    model.save(wandb.run.dir + '/model_tf', save_format='tf')
+    model_artifact.add_dir(wandb.run.dir + '/model_tf')
+    run.log_artifact(model_artifact)
+    logger.info('✅ Model 4 saved with success!')
 
 def plot_loss_and_acc(history, epochs, name_model, run):
     """
