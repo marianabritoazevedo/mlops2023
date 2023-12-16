@@ -20,7 +20,11 @@ To build this project, the transformers architecture was adopted as the model fo
 </p>
 
 ## 🛠️ Project Stages
-For this project, the best practices for machine learning projects were employed. Thus, its execution was divided into stages that should be carried out sequentially, as found in the scripts in the `src` folder. Below is a general description of each stage of the project executed in MLFlow.
+For this project, the best practices for machine learning projects were employed. Thus, its execution was divided into stages that should be carried out sequentially, as found in the scripts in the `src` folder. Below is the interface with the runs in MLFlow, and a general description of each stage of the project executed.
+
+<p align="center">
+   <img src="./img/interface-mlflow.png" width="900">
+</p>
 
 ### 1. Data Fetching
 This stage is responsible for obtaining the data to be used in the project. It sets up logging to monitor the process and configures MLFlow. Subsequently, it downloads the dataset and logs the data as an artifact.
@@ -99,7 +103,7 @@ This section summarizes the results obtained of the model evaluated in this proj
 
 ### Accuracy
 
-First, it is possible to compare the accuracys for the train, validation and test data
+First, it is possible to compare the accuracies for the train, validation and test data:
 
 - Train Accuracy: 0.5502
 - Validation Accuracy: 0.6451
@@ -134,34 +138,57 @@ Below, there is the confusion matrix of the model used in the classification tas
 
 ## 🖥️ Gradio Interface
 
+In the last stage of the project, an interface was developed using the Gradio tool. This library enables the creation of interactive interfaces, allowing the user to write the tweet, and then, make the classification based on the trained model. Below is an image of the developed interface.
+
+<p align="center">
+   <img src="./img/interface-gradio.png" width="900">
+</p>
+
 ## 🔧 Requirements/Technologies
 - **Python Version**: 3.9 or higher. The pipeline is developed and tested with Python 3.9+, ensuring compatibility with the latest language features and libraries.
 - **Python Packages**: A comprehensive list of Python packages required for running the pipeline is detailed within the `requirements.txt` file.
 
 ## 🚀 Getting Started
-To run the pipeline, make sure Apache Airflow is set up and operational. Define the necessary environment variables in the .env file, install dependencies from requirements.txt, and follow these steps:
+To run this project, follow the steps below:
 
-1. Ensure you have Python version 3.8+ and Airflow 2.3+ installed. You can find instructions on how to install Airflow [here](https://airflow.apache.org/docs/apache-airflow/stable/start.html). Remember to configure the path to the `AIRFLOW_HOME` environment variable and the `airflow.cfg` file as instructed in the documentation to define the Airflow home directory and path to the dags folder.
-
-2. Clone the repository: 
+1. Clone the repository: 
    ```
-   git clone https://github.com/thaisaraujom/mlops2023.git
+   git clone https://github.com/marianabritoazevedo/mlops2023.git
    ```
 
-3. Navigate to the `Pipeline_Disaster_Tweet_Classification` directory.
+2. Navigate to the `Twitter_climate_sentiment` directory.
 
-4. Install the required libraries: 
+3. Create a virtual environment: 
+   ```
+   python -m venv <your_env>  # Windows
+   python3 -m venv <your_env> # Linux
+   ```
+
+4. Activate the virtual environment: 
+   ```
+   <your_env>/Scripts/activate    # Windows
+   source <your_env>\bin\activate # Linux
+   ```
+
+5. Install the required libraries: 
    ```
    pip install -r requirements.txt
    ``` 
 
-5. Sign up for a Weights & Biases account to obtain your API key for experiment tracking. Visit the [Weights & Biases sign-up page](https://wandb.ai/signup) to create an account. Once you have your account, locate your API key in the account settings.
+6. Create the server for MLFlow:
+   ```
+   mlflow server --host 127.0.0.1 --port 8080
+   ```
 
-   To configure the API key on your machine, add it to the `.env` file in your project's root directory (dags):
+7. Execute MLflow project:
    ```
-   WANDB_API_KEY='your_api_key_here'
+   python twitter_sentiment.py  # Windows
+   python3 twitter_sentiment.py # Linux
    ```
-   Make sure to replace `your_api_key_here` with your actual API key. This `.env` file should not be committed to your version control system; ensure it's listed in your `.gitignore` file to prevent potential security issues.
+8. Wait until the execution of the `twitter_sentiment.py` finishes, and then, run the script to try the interface:
+   ```
+   gradio app.py
+   ```
 
 ## 👥 Team
 
